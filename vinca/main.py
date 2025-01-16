@@ -259,7 +259,7 @@ def generate_output(pkg_shortname, vinca_conf, distro, version, all_pkgs=None):
             "build": [
                 "${{ compiler('cxx') }}",
                 "${{ compiler('c') }}",
-                "${{ stdlib('c') }}",
+                {"if": "target_platform!='emscripten-wasm32'", "then": ["${{ stdlib('c') }}"]},
                 "ninja",
                 "python",
                 "setuptools",
@@ -409,6 +409,28 @@ def generate_output(pkg_shortname, vinca_conf, distro, version, all_pkgs=None):
         if isinstance(k, dict):
             return list(k.values())[0]
         return k
+
+    # For Emscripten, only install cmake as a build dependency.
+    # This should be ok as cmake is only really needed during builds, not when running packages.
+    if "cmake" in output["requirements"]["run"]:
+        output["requirements"]["run"].remove("cmake")
+        output["requirements"]["run"].append({"if": "target_platform != 'emscripten-wasm32'", "then": ["cmake"]})
+
+    if "cmake" in output["requirements"]["host"]:
+        output["requirements"]["host"].remove("cmake")
+        if "cmake" not in output["requirements"]["build"]:
+            output["requirements"]["build"].append("cmake")
+
+    if f"ros-{config.ros_distro}-mimick-vendor" in output["requirements"]["build"]:
+        output["requirements"]["build"].remove(f"ros-{config.ros_distro}-mimick-vendor")
+        output["requirements"]["build"].append({"if": "target_platform != 'emscripten-wasm32'", "then": [f"ros-{config.ros_distro}-mimick-vendor"]})
+
+    if f"ros-{config.ros_distro}-mimick-vendor" in output["requirements"]["host"]:
+        output["requirements"]["host"].remove(f"ros-{config.ros_distro}-mimick-vendor")
+        output["requirements"]["build"].append({"if": "target_platform != 'emscripten-wasm32'", "then": [f"ros-{config.ros_distro}-mimick-vendor"]})
+
+    if f"ros-{config.ros_distro}-rosidl-default-generators" in output["requirements"]["host"]:
+        output["requirements"]["build"].append({"if": "target_platform == 'emscripten-wasm32'", "then": [f"ros-{config.ros_distro}-rosidl-default-generators"]})
 
     output["requirements"]["run"] = sorted(output["requirements"]["run"], key=sortkey)
     output["requirements"]["host"] = sorted(output["requirements"]["host"], key=sortkey)
@@ -713,7 +735,7 @@ def parse_package(pkg, distro, vinca_conf, path):
             "build": [
                 "${{ compiler('cxx') }}",
                 "${{ compiler('c') }}",
-                "${{ stdlib('c') }}",
+                {"if": "target_platform != 'emscripten-wasm32'", "then": ["${{ stdlib('c') }}"]},
                 "ninja",
                 "python",
                 "patch",
