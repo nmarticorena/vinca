@@ -259,7 +259,10 @@ def generate_output(pkg_shortname, vinca_conf, distro, version, all_pkgs=None):
             "build": [
                 "${{ compiler('cxx') }}",
                 "${{ compiler('c') }}",
-                "${{ stdlib('c') }}",
+                {
+                    "if": "target_platform != 'emscripten-wasm32'",
+                    "then": ["${{stdlib('c')}}"],
+                },
                 "ninja",
                 "python",
                 "setuptools",
@@ -713,7 +716,10 @@ def parse_package(pkg, distro, vinca_conf, path):
             "build": [
                 "${{ compiler('cxx') }}",
                 "${{ compiler('c') }}",
-                "${{ stdlib('c') }}",
+                {
+                    "if": "target_platform != 'emscripten-wasm32'",
+                    "then": ["${{stdlib('c')}}"],
+                },
                 "ninja",
                 "python",
                 "patch",
